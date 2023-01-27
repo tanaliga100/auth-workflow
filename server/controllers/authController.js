@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const { StatusCodes } = require("http-status-codes");
 const CustomError = require("../errors");
+const Token = require("../models/Token");
 const {
   attachCookiesToResponse,
   createTokenUser,
@@ -40,6 +41,7 @@ const register = async (req, res) => {
   });
   // send verification token only while testing postman
   res.status(StatusCodes.CREATED).json({
+    token: user.verificationToken,
     msg: "Please check your email to verify your account",
   });
   // const tokenUser = createTokenUser(user);
@@ -94,9 +96,28 @@ const login = async (req, res) => {
   }
 
   const tokenUser = createTokenUser(user);
+  // create refresh token
+  let refreshToken = "";
+  const existingToken = await Token.findOne({ user: user._id });
+  if (existingToken) {
+    const { isValid } = existingToken;
+    if (!isValid) {
+      throw new CustomError.UnauthenticatedError("Invalid Credentials");
+    }
+    refreshToken = existingToken.refreshToken;
+    attachCookiesToResponse({ res, user: tokenUser, refreshToken });
+    res.status(StatusCodes.OK).json({ user: tokenUser });
+    return;
+  }
 
-  attachCookiesToResponse({ res, user: tokenUser });
+  refreshToken = crypto.randomBytes(40).toString("hex");
+  const userAgent = req.headers["user-agent"];
+  const ipAddress = req.ip;
+  const userToken = { refreshToken, userAgent, ipAddress, user: user._id };
+  await Token.create(userToken);
+  // check for an existing token
 
+  attachCookiesToResponse({ res, user: tokenUser, refreshToken });
   res.status(StatusCodes.OK).json({ user: tokenUser });
 };
 
