@@ -1,8 +1,14 @@
 const User = require("../models/User");
 const { StatusCodes } = require("http-status-codes");
 const CustomError = require("../errors");
-const { attachCookiesToResponse, createTokenUser } = require("../utils");
+const {
+  attachCookiesToResponse,
+  createTokenUser,
+
+  sendVerificationEmail,
+} = require("../utils");
 const crypto = require("crypto");
+// const sendVerificationEmail = require("../utils/sendVerificationEmail");
 
 // REGISTER_CONTROLLER
 const register = async (req, res) => {
@@ -24,10 +30,17 @@ const register = async (req, res) => {
     role,
     verificationToken,
   });
+  const origin = "http://localhost:3000";
+
+  await sendVerificationEmail({
+    name: user.name,
+    email: user.email,
+    verificationToken: user.verificationToken,
+    origin,
+  });
   // send verification token only while testing postman
   res.status(StatusCodes.CREATED).json({
     msg: "Please check your email to verify your account",
-    verificationToken: user.verificationToken,
   });
   // const tokenUser = createTokenUser(user);
   // attachCookiesToResponse({ res, user: tokenUser });
@@ -37,14 +50,13 @@ const register = async (req, res) => {
 // VERIFY_CONTROLLER
 const verifyEmail = async (req, res) => {
   const { email, verificationToken } = req.body;
-  console.log(req.body);
   const user = await User.findOne({ email });
   if (!user) {
     throw new CustomError.UnauthenticatedError("Verification token failed");
   }
   if (user.verificationToken !== verificationToken) {
     throw new CustomError.UnauthenticatedError(
-      "Verification token failed... Don't match "
+      "Verification token failed... Don't match"
     );
   }
   user.isVerified = true;
@@ -82,6 +94,7 @@ const login = async (req, res) => {
   }
 
   const tokenUser = createTokenUser(user);
+
   attachCookiesToResponse({ res, user: tokenUser });
 
   res.status(StatusCodes.OK).json({ user: tokenUser });
