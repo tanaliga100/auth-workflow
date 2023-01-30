@@ -167,6 +167,28 @@ const forgotPassword = async (req, res) => {
 };
 // RESET_PASSWORD
 const resetPassword = async (req, res) => {
+  // CLIENT QUERY
+  const { token, email, password } = req.body;
+  if (!email || !password || !token) {
+    throw new CustomError.BadRequestError(
+      "Please provide all the values: [Email, Password, Token]"
+    );
+  }
+  // DATABASE QUERY
+  const user = await User.findOne({ email: email });
+  if (user) {
+    const currentDate = new Date();
+    if (
+      user.passwordToken === token &&
+      user.passwordTokenExpirationDate > currentDate
+    ) {
+      user.password = password;
+      user.passwordToken = null;
+      user.passwordTokenExpirationDate = null;
+    }
+  }
+  await user.save();
+  // SERVER RESPONSE
   res.send("reset password");
 };
 
