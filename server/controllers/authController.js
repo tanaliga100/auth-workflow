@@ -5,7 +5,6 @@ const Token = require("../models/Token");
 const {
   attachCookiesToResponse,
   createTokenUser,
-
   sendVerificationEmail,
 } = require("../utils");
 const crypto = require("crypto");
@@ -135,10 +134,20 @@ const logout = async (req, res) => {
   });
   res.status(StatusCodes.OK).json({ msg: "user logged out!" });
 };
+// FORGOT_PASSWORD
+const forgotPassword = async (req, res) => {
+  res.send("forgot password");
+};
+// RESET_PASSWORD
+const resetPassword = async (req, res) => {
+  res.send("reset password");
+};
 
 module.exports = {
   register,
   login,
   logout,
   verifyEmail,
+  forgotPassword,
+  resetPassword,
 };
